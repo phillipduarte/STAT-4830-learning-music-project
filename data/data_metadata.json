@@ -1,0 +1,114 @@
+{
+  "dataset_info": {
+    "total_chorales": 7,
+    "total_pages": 28,
+    "measures_per_page": 8,
+    "pages_per_chorale": 4,
+    "chorale_ids": [
+      "bwv17.7.mxl",
+      "bwv171.6.mxl",
+      "bwv190.7-inst.mxl",
+      "bwv190.7.mxl",
+      "bwv248.42-4.mxl",
+      "bwv248.64-6.mxl",
+      "bwv276.mxl"
+    ]
+  },
+  "features": {
+    "count": 5,
+    "names": [
+      "key_numeric",
+      "time_signature_ratio",
+      "average_pitch",
+      "pitch_range",
+      "note_density"
+    ],
+    "description": {
+      "key_numeric": "Key signature (0-11 pitch class, +0.5 for minor)",
+      "time_signature_ratio": "Time signature as decimal (e.g., 3/4 = 0.75)",
+      "average_pitch": "Mean MIDI pitch number",
+      "pitch_range": "Range of pitches (max - min) in semitones",
+      "note_density": "Notes per beat (rhythmic activity)"
+    }
+  },
+  "similarity_features": {
+    "count": 5,
+    "names": [
+      "sim_key",
+      "sim_time_sig",
+      "sim_avg_pitch",
+      "sim_pitch_range",
+      "sim_note_density"
+    ],
+    "range": [
+      0.0,
+      1.0
+    ],
+    "description": "0 = completely different, 1 = identical"
+  },
+  "pairs": {
+    "total_pairs": 20,
+    "matching_pairs": 10,
+    "non_matching_pairs": 10
+  },
+  "train_test_split": {
+    "test_size": 0.3,
+    "random_state": 42,
+    "train_pairs": 14,
+    "test_pairs": 6,
+    "train_positive": 7,
+    "train_negative": 7,
+    "test_positive": 3,
+    "test_negative": 3
+  },
+  "statistics": {
+    "feature_stats": {
+      "key_numeric": {
+        "mean": 4.357142857142857,
+        "std": 3.338488077783512,
+        "min": 0.0,
+        "max": 11.5
+      },
+      "time_signature_ratio": {
+        "mean": 0.9732142857142857,
+        "std": 0.078742598543589,
+        "min": 0.75,
+        "max": 1.0
+      },
+      "average_pitch": {
+        "mean": 70.78518572082088,
+        "std": 14.73510945232842,
+        "min": 0.0,
+        "max": 80.16666666666667
+      },
+      "pitch_range": {
+        "mean": 11.714285714285714,
+        "std": 5.44913953694725,
+        "min": 0.0,
+        "max": 24.0
+      },
+      "note_density": {
+        "mean": 1.0609002809587784,
+        "std": 0.5837662567278917,
+        "min": 0.0,
+        "max": 2.8275862068965516
+      }
+    },
+    "similarity_stats": {
+      "matching": {
+        "sim_key": 0.9166666666666666,
+        "sim_time_sig": 0.7,
+        "sim_avg_pitch": 0.9568888521457964,
+        "sim_pitch_range": 0.9291666666666668,
+        "sim_note_density": 0.9435716151664428
+      },
+      "non_matching": {
+        "sim_key": 0.4083333333333333,
+        "sim_time_sig": 0.8,
+        "sim_avg_pitch": 0.6427923831569664,
+        "sim_pitch_range": 0.8083333333333332,
+        "sim_note_density": 0.9190618935662039
+      }
+    }
+  }
+}

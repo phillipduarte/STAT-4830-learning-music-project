@@ -1,0 +1,7 @@
+page_id_1,page_id_2,chorale_1,chorale_2,label,sim_key,sim_time_sig,sim_avg_pitch,sim_pitch_range,sim_note_density
+bwv190.7-inst.mxl_page0,bwv17.7.mxl_page0,bwv190.7-inst.mxl,bwv17.7.mxl,0,0.25,0.0,0.6109871031746035,1.0,0.9993730407523511
+bwv276.mxl_page0,bwv276.mxl_page1,bwv276.mxl,bwv276.mxl,1,1.0,1.0,0.9635416666666666,1.0,0.9793103448275862
+bwv17.7.mxl_page2,bwv190.7-inst.mxl_page0,bwv17.7.mxl,bwv190.7-inst.mxl,0,0.0,1.0,0.6240079365079367,0.9583333333333334,0.9924466338259442
+bwv190.7.mxl_page0,bwv190.7.mxl_page1,bwv190.7.mxl,bwv190.7.mxl,1,1.0,1.0,0.9974999999999999,1.0,0.9900862068965517
+bwv171.6.mxl_page1,bwv171.6.mxl_page2,bwv171.6.mxl,bwv171.6.mxl,1,1.0,1.0,1.0,1.0,0.9
+bwv171.6.mxl_page1,bwv190.7-inst.mxl_page3,bwv171.6.mxl,bwv190.7-inst.mxl,0,0.5833333333333333,1.0,0.9201388888888887,0.75,0.9875
