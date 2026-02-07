@@ -11,7 +11,7 @@ Some constraints and things that may go wrong  include that there may not be too
 
 ### Technical Approach
 1. Processing: Extract sheet music-based features using music21 and define similarity metrics for each of these. Specify pages, requirements on number of measures, etc. and extract these features for each page.
-2. Mathematical Formulation: Formulate as a constrained optimization problem, the goal is to minimize the squared error loss based on correct/incorrect classification as from the same piece or not. The similarity vector will contain the similarity of the features (m = 5 in our initial example).
+2. Mathematical Formulation: Formulate as a constrained optimization problem, the goal is to minimize the squared error loss based on correct/incorrect classification as from the same piece or not. The similarity vector will contain the similarity of the features (m = 5 in our initial example). For similarity vector s = [s1, s2, s3, s4, s5], we have as follows
 
 ![alt text](report_math.png)
 
