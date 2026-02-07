@@ -17,8 +17,7 @@ For a pair of pages with similarity vector **s** = [s₁, s₂, s₃, s₄, s₅
 
 $\text{Overall Similarity} = \mathbf{w}^T \mathbf{s} = \sum_{k=1}^{m} w_k \cdot s_k$
 
-Minimize:
-$L(\mathbf{w}) = \displaystyle \sum_{(i,j) \in \text{training pairs}} (\text{label}_{ij} - \mathbf{w}^T \mathbf{s}_{ij})^2$
+$\text{Minimize: } L(\mathbf{w}) = \sum_{(i,j) \in \text{training pairs}} \left( \text{label}_{ij} - \mathbf{w}^T \mathbf{s}_{ij} \right)^2$
 
 Subject to:
 * $\sum_{k=1}^{m} w_k = 1$ (weights sum to 1)
