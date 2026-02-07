@@ -19,6 +19,7 @@ $\text{Overall Similarity} = \mathbf{w}^T \mathbf{s} = \sum_{k=1}^{m} w_k \cdot 
 
 Minimize:
 $L(\mathbf{w}) = \sum_{(i,j) \in \text{training pairs}} \left( \text{label}_{ij} - \mathbf{w}^T \mathbf{s}_{ij} \right)^2$
+
 Subject to:
 * $\sum_{k=1}^{m} w_k = 1$ (weights sum to 1)
 * $w_k \geq 0$ for all $k \in \{1,2,3,4,5\}$ (non-negative weights)
