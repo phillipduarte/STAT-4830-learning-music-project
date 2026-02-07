@@ -14,13 +14,11 @@ Some constraints and things that may go wrong  include that there may not be too
 2. Mathematical Formulation: Formulate as a constrained optimization problem, the goal is to minimize the squared error loss based on correct/incorrect classification as from the same piece or not. The similarity vector will contain the similarity of the features (m = 5 in our initial example).
 
 For a pair of pages with similarity vector **s** = [s₁, s₂, s₃, s₄, s₅]:
-$$
-\text{Overall Similarity} = \mathbf{w}^T \mathbf{s} = \sum_{k=1}^{m} w_k \cdot s_k
-$$
+
+$\text{Overall Similarity} = \mathbf{w}^T \mathbf{s} = \sum_{k=1}^{m} w_k \cdot s_k$
+
 Minimize:
-$$
-L(\mathbf{w}) = \sum_{(i,j) \in \text{training pairs}} \left( \text{label}_{ij} - \mathbf{w}^T \mathbf{s}_{ij} \right)^2
-$$
+$L(\mathbf{w}) = \sum_{(i,j) \in \text{training pairs}} \left( \text{label}_{ij} - \mathbf{w}^T \mathbf{s}_{ij} \right)^2$
 Subject to:
 * $\sum_{k=1}^{m} w_k = 1$ (weights sum to 1)
 * $w_k \geq 0$ for all $k \in \{1,2,3,4,5\}$ (non-negative weights)
