@@ -1,17 +1,45 @@
 {
   "dataset_info": {
-    "total_chorales": 7,
-    "total_pages": 28,
+    "total_composers": 3,
+    "total_pieces": 14,
+    "total_pages": 56,
     "measures_per_page": 8,
-    "pages_per_chorale": 4,
-    "chorale_ids": [
-      "bwv17.7.mxl",
-      "bwv171.6.mxl",
-      "bwv190.7-inst.mxl",
-      "bwv190.7.mxl",
-      "bwv248.42-4.mxl",
-      "bwv248.64-6.mxl",
-      "bwv276.mxl"
+    "pages_per_piece": 4,
+    "composers": {
+      "bach": {
+        "name": "Bach",
+        "era": "Baroque",
+        "pieces": 6,
+        "pages": 24
+      },
+      "mozart": {
+        "name": "Mozart",
+        "era": "Classical",
+        "pieces": 3,
+        "pages": 12
+      },
+      "beethoven": {
+        "name": "Beethoven",
+        "era": "Classical/Romantic",
+        "pieces": 5,
+        "pages": 20
+      }
+    },
+    "piece_ids": [
+      "bach_bwv17.7",
+      "bach_bwv248.42-4",
+      "bach_bwv276",
+      "bach_bwv29.8",
+      "bach_bwv320",
+      "bach_bwv328",
+      "mozart_movement1",
+      "mozart_movement2",
+      "mozart_movement3",
+      "beethoven_opus132",
+      "beethoven_opus133",
+      "beethoven_movement1",
+      "beethoven_movement2",
+      "beethoven_movement3"
     ]
   },
   "features": {
@@ -47,67 +75,80 @@
     "description": "0 = completely different, 1 = identical"
   },
   "pairs": {
-    "total_pairs": 20,
-    "matching_pairs": 10,
-    "non_matching_pairs": 10
+    "total_pairs": 50,
+    "matching_pairs": 20,
+    "hard_negative_pairs": 15,
+    "easy_negative_pairs": 15,
+    "pair_type_description": {
+      "matching": "Same piece, different pages (label=1)",
+      "hard_negative": "Same composer, different pieces (label=0)",
+      "easy_negative": "Different composers (label=0)"
+    }
   },
   "train_test_split": {
     "test_size": 0.3,
     "random_state": 42,
-    "train_pairs": 14,
-    "test_pairs": 6,
-    "train_positive": 7,
-    "train_negative": 7,
-    "test_positive": 3,
-    "test_negative": 3
+    "train_pairs": 35,
+    "test_pairs": 15,
+    "train_positive": 14,
+    "train_negative": 21,
+    "test_positive": 6,
+    "test_negative": 9
   },
   "statistics": {
     "feature_stats": {
       "key_numeric": {
-        "mean": 4.357142857142857,
-        "std": 3.338488077783512,
+        "mean": 4.732142857142857,
+        "std": 3.156471398304076,
         "min": 0.0,
         "max": 11.5
       },
       "time_signature_ratio": {
-        "mean": 0.9732142857142857,
-        "std": 0.078742598543589,
-        "min": 0.75,
-        "max": 1.0
+        "mean": 0.9464285714285714,
+        "std": 0.13453865374177545,
+        "min": 0.375,
+        "max": 1.125
       },
       "average_pitch": {
-        "mean": 70.78518572082088,
-        "std": 14.73510945232842,
+        "mean": 68.9875761698564,
+        "std": 13.953190384145168,
         "min": 0.0,
-        "max": 80.16666666666667
+        "max": 79.14285714285714
       },
       "pitch_range": {
-        "mean": 11.714285714285714,
-        "std": 5.44913953694725,
+        "mean": 15.821428571428571,
+        "std": 7.997970521796917,
         "min": 0.0,
-        "max": 24.0
+        "max": 34.0
       },
       "note_density": {
-        "mean": 1.0609002809587784,
-        "std": 0.5837662567278917,
+        "mean": 1.1052289631892465,
+        "std": 0.586184970440639,
         "min": 0.0,
-        "max": 2.8275862068965516
+        "max": 3.1666666666666665
       }
     },
     "similarity_stats": {
       "matching": {
-        "sim_key": 0.9166666666666666,
-        "sim_time_sig": 0.7,
-        "sim_avg_pitch": 0.9568888521457964,
-        "sim_pitch_range": 0.9291666666666668,
-        "sim_note_density": 0.9435716151664428
+        "sim_key": 0.5416666666666666,
+        "sim_time_sig": 0.6,
+        "sim_avg_pitch": 0.8632399812084934,
+        "sim_pitch_range": 0.7395833333333334,
+        "sim_note_density": 0.9391342358312185
       },
-      "non_matching": {
-        "sim_key": 0.4083333333333333,
-        "sim_time_sig": 0.8,
-        "sim_avg_pitch": 0.6427923831569664,
-        "sim_pitch_range": 0.8083333333333332,
-        "sim_note_density": 0.9190618935662039
+      "hard_negative": {
+        "sim_key": 0.4666666666666667,
+        "sim_time_sig": 0.6666666666666666,
+        "sim_avg_pitch": 0.8750662835971931,
+        "sim_pitch_range": 0.663888888888889,
+        "sim_note_density": 0.9199850649350652
+      },
+      "easy_negative": {
+        "sim_key": 0.5555555555555556,
+        "sim_time_sig": 0.6,
+        "sim_avg_pitch": 0.7776555845751048,
+        "sim_pitch_range": 0.6138888888888889,
+        "sim_note_density": 0.8107442031148929
       }
     }
   }
