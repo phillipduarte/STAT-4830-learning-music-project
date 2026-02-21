@@ -15,6 +15,11 @@ Some constraints and things that may go wrong  include that there may not be too
 1. Processing: Extract sheet music-based features using music21 and define similarity metrics for each of these. The 5 features chosen for the initial experiments were [key, time signature, average pitch, pitch range, note density] with heuristic-based similarity functions for each. Specify pages, requirements on number of measures, etc. and extract these features for each page.
 2. Mathematical Formulation: For the initial experiments we used two types of regression. Initially we used linear regression and minimized the squared error loss formulated as a constrained optimization problem (see report draft 1), however this was not the ideal approach since we are dealing with a binary classification problem rather than prediction of some continuous value. A more appropriate method is logistic regression, which predicts match/non-match based on the sigmoid of the logits and whether it is $\geq 0.5$, or equivalently whether the logits are $\geq 0$.
 
+Whereas previously we had
+![alt text](report_math.png)
+
+Now we have
+
 **Features:** The similarity vectors previously contained values from 0-1, now they are re-scaled to be between -1 to 1 where 1 would mean they are more similar and -1 if they are less similar. Define $s = [s1, s2, s3, s4, s5]$
 
 **Labels:** Same as previously, 1 for match (two pages from the same piece), 0 for non-match (two pages from different pieces, with also a further distinction of easy negative and hard negative referring to different pieces of different composers and the same composer, respectively)
@@ -22,23 +27,11 @@ Some constraints and things that may go wrong  include that there may not be too
 **Loss (as optimization problem):**
 Negative log-likelihood loss (Binary Cross-Entropy Loss). This is evidently also a convex loss. Taking out the constraint for the weights to have to sum to 1 as that considerably limited the performance.
 
-Minimize
-$$
-L(\mathbf{w}) = -\sum_{(i, j) \in \text{training pairs}} \text{label}_{ij} \cdot \log{(\sigma(\mathbf{w}^T\mathbf{s}_{ij})) + (1 - \text{label}_{ij}}) \cdot \log{(1 - \sigma(\mathbf{w}^T\mathbf{s}_{ij}))}
-$$
-Subject to
-1. $w_k \geq 0$ for all $k \in \{1,2,3,4,5\}$ (non-negative weights)
-
 For this case, one thing that was changed was removal of the constraint that all weights had to sum to 1, as that seemed to drastically decrease performance. But still maintaining that the weights should be non-negative (i.e. pieces being more similar in an area cannot mean that they will contribute negatively to the overall likeliness of it being a match)
 
-For reference, the gradient with respect to $w$ is as follows:
-$$\nabla L(\mathbf{w}) = \sum_{(i,j)} (\sigma(\mathbf{w}^Ts_{ij}) - \text{label}_{ij}) \cdot \mathbf{s}_{ij}$$
+![alt text](report_math2.png)
 
-**Goal:** Learn a weight vector of $$\mathbf{w} = [w_1, w_2, w_3, w_4, w_5]$$ that is optimized for classification based on the following where $\mathbf{1}$ is the indicator function. The behavior of the sigmoid is that it converts values from $-\infty$ to $\infty$ into probabilities and is centered around 0 so this works.
-$$\mathbf{1}(\mathbf{w}^T\mathbf{s}_{ij} \geq 0) = \begin{cases}
-1, &\mathbf{w}^T\mathbf{s}_{ij} \geq 0
-\\ 0, & o.w.
-\end{cases}$$
+that is optimized for classification based on the above where $\mathbf{1}$ is the indicator function. The behavior of the sigmoid is that it converts values from $-\infty$ to $\infty$ into probabilities and is centered around 0 so this works.
 
 3. Optimization Methods: Use various algorithms to learn weights for a weighted similarity function to distinguish matching vs. non-matching pages.
     1. Projected Gradient Descent: This projected method was chosen because it will allow us to remain in the feasible set. The weight vector would be a learnable parameter which would be updated by going in the direction of the negative gradient, followed by projection to enforce the constraint of all weights being non-negative. This is implemented using PyTorch with a loop going through some fixed number of iterations, from which we will exit if the stopping condition is met (based on some tolerance for the norm of the gradient). torch.nn.functional.binary_cross_entropy_with_logits is chosen for loss calculation for better numerical stability.
@@ -54,8 +47,8 @@ Results as follows:
 | | Learned weights | Loss | Train Accuracy | Test Accuracy | Iters | Time (s) |
 | --- | --- | --- | --- | --- | --- | --- |
 | Projected Gradient Descent | [0.6598, 0, 0.3402, 0.0] | 2.199300 | 0.7143 | 0.8333 | 1000* | 0.0461
-| Sequential Least Squares Programming | [0.6964, 0, 0, 0.3036, 0] | 2.196402 | 0.7857 | 0.8333 | 4 | 0.0058
-| Convex Optimization | [0.6964, 0, 0, 0.3036, 0] | 2.196402 | 0.7857 | 0.8333 | N/A | 0.0568
+| Sequential Least Squares Programming | [0.6964, 0, 0.3036, 0, 0] | 2.196402 | 0.7857 | 0.8333 | 4 | 0.0058
+| Convex Optimization | [0.6964, 0, 0.3036, 0, 0] | 2.196402 | 0.7857 | 0.8333 | N/A | 0.0568
 
 \* learning rate = 0.0001, max_iterations=1000, tolerance=1e-6
 
@@ -71,7 +64,7 @@ These results are also based on an expanded test set which now includes works by
 Results as follows:
 | | Learned weights | Loss | Train Accuracy | Test Accuracy | Iters | Time (s) |
 | --- | --- | --- | --- | --- | --- | --- |
-| Projected Gradient Descent | [0.0582, 0, 0, 0.2407] | 0.6902 | 0.5429 | 0.5333 | 1000* | 0.2327 
+| Projected Gradient Descent | [0.0582, 0, 0, 0.2407, 0] | 0.6902 | 0.5429 | 0.5333 | 1000* | 0.2327 
 | Sequential Least Squares Programming | [0.0582, 0, 0, 0.2457, 0] | 0.6902 | 0.5429 | 0.5333 | 7 | 0.0489
 | Convex Optimization | [0.0575, 0, 0, 0.2446, 0] | 0.6902 | 0.5429 | 0.5333 | N/A | 0.076
 
@@ -87,7 +80,7 @@ As an analysis of these results, it is clear that it reaches a similar conclusio
 Immediate improvements
 - Some other features to consider are chords for harmonic similarity, more complex rhythm patterns, motifs, melodic contour features, major/minor/dominant key relationships, etc.
 - Improved choice of hypermarameters (learning rate, max iterations, tolerance) using grid search or sorts.
-- Cross evaluation for more accurate evaluation of performance.
+- Cross validation for more accurate evaluation of performance.
 
 Technical challenges to address / Questions we may need help with
 - As similar to previously, it is still difficult to understand the behavior of the gradient descent and select appropriate hyperparameters for ideal loss decreasing, etc.
