@@ -16,6 +16,7 @@ Some constraints and things that may go wrong  include that there may not be too
 2. Mathematical Formulation: For the initial experiments we used two types of regression. Initially we used linear regression and minimized the squared error loss formulated as a constrained optimization problem (see report draft 1), however this was not the ideal approach since we are dealing with a binary classification problem rather than prediction of some continuous value. A more appropriate method is logistic regression, which predicts match/non-match based on the sigmoid of the logits and whether it is $\geq 0.5$, or equivalently whether the logits are $\geq 0$.
 
 Whereas previously we had
+
 ![alt text](report_math.png)
 
 Now we have
