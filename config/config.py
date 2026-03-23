@@ -108,3 +108,12 @@ EMBEDDING_DEVICE = "cpu"
 # How many snippet WAVs to embed in one forward pass.
 # Reduce if you run out of memory.
 EMBEDDING_BATCH_SIZE = 8
+
+# ---------------------------------------------------------------------------
+# perturb.py config
+# ---------------------------------------------------------------------------
+# True if we are taking from music21 corpus, false if we have external MIDIs
+PERTURB_IS_M21 = True 
+
+PERTURB_COMPOSER = "bach"
+PERTURB_DIR = BASE_DIR / "perturb"
