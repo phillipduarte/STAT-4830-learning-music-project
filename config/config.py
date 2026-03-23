@@ -19,6 +19,10 @@ SNIPPETS_DIR    = DATA_DIR / "snippets"   # chopped MIDI snippets
 AUDIO_DIR       = DATA_DIR / "audio"      # WAV renderings of snippets (Tier 2)
 EMBEDDINGS_DIR  = DATA_DIR / "embeddings" # cached numpy embedding arrays
 
+# Either one of the following
+# MIDI_DIR = DATA_DIR / "midis" / "jazz"
+MIDI_DIR = DATA_DIR / "midis" / "symphonies"
+
 # ---------------------------------------------------------------------------
 # Data Source
 # ---------------------------------------------------------------------------
@@ -88,7 +92,8 @@ LABEL_GRANULARITY = "piece"
 
 # Download GeneralUser GS soundfont from:
 # https://www.polyphone-soundfonts.com/documents/27-instrument-sets/351-generaluser-gs-v1-471
-SOUNDFONT_PATH = Path("/usr/share/sounds/sf2/FluidR3_GM.sf2")
+# SOUNDFONT_PATH = Path("/usr/share/sounds/sf2/FluidR3_GM.sf2")
+SOUNDFONT_PATH = Path(r"C:\soundfonts\FluidR3_GM.sf2")
 
 # MERT expects 24kHz mono audio — do not change unless switching embedding models.
 SAMPLE_RATE = 24_000
