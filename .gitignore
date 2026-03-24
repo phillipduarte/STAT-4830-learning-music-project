@@ -4,3 +4,10 @@ docs/figures/*
 !docs/figures/*.tex
 
 local/
+
+# The actual virtual environment (compiled binaries and libraries)
+.venv/
+
+__pycache__/
+*.py[cod]
+*$py.class
