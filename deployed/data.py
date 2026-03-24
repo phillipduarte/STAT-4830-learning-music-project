@@ -33,8 +33,8 @@ def load_data(embeddings_dir: Path, batch_size: int):
         n_classes:    Number of classes
         y_train_np:   Raw integer labels for the training set (for class weighting)
     """
-    X_train = np.load(embeddings_dir / "embeddings_train.npy")
-    X_test  = np.load(embeddings_dir / "embeddings_test.npy")
+    X_train = np.load(embeddings_dir / "embeddings_train.npy", allow_pickle=True)
+    X_test  = np.load(embeddings_dir / "embeddings_test.npy", allow_pickle=True)
 
     y_train_str = np.load(embeddings_dir / "labels_train.npy", allow_pickle=True)
     y_test_str  = np.load(embeddings_dir / "labels_test.npy",  allow_pickle=True)
