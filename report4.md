@@ -103,6 +103,14 @@ Evaluation metrics:
 
 These metrics measure whether the correct musical piece appears within the closest retrieved neighbors.
 
+To summarize the perturbations:
+
+The perturbations were created with the goal of introducing pitch shifting, time stretching to the FluidSynth renders to prevent the model from "memorizing" clean audio. We used "librosa" library's 'effects' before generating the embeddings, and in doing so made some alterations to the data pipeline, which can be viewed in `perturb.py`.
+
+Some modifications to the pipeline now allow for the pipeline to be entered via music21, MIDI, or WAV files. Rather than creating snippets based on measure numbers from the music21 Score object, the snippets are now creates following perturbations of the audio and based on duration (8 seconds, with 4 seconds overlap to allow more data). These snippets are then embedded with MERT similarly.
+
+The perturbations performed were (1) *tempo change* for which we used 0.9, 0.95, 1.0, 1.05, and 1.1 times the original speed, and (2) *pitch shift* for which we used 0, 1, 2 semitones up/down. Combinations of these changes yield 25 versions. Overall this increased the previous ~7 snippets/piece to now ~179 snippets/piece for a total of 77070 snippets (split across train/test).
+
 ---
 
 ## Results
@@ -218,3 +226,9 @@ This enables:
 * evaluation across multiple model families
 * larger dataset training runs
 * reproducible benchmarking
+
+---
+
+### 6. Continued data perturbations
+
+Consider creating more perturbations beyond the current small changes to create for more robustness, especially more perturbations based on pitch. Try to perturb the embeddings directly, rather than the audio, which may be less interpretable but still be valuable. At the same time, may need to reevaluate computing resources needed / generating those changes during training.
