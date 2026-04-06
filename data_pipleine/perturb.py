@@ -1,6 +1,18 @@
 """
 perturb.py — Separate stage to make alterations to WAV files (rather than music21 Scores/MIDI)
 
+update 4/3/2026: There are issues in data leakage due to the use of
+_assign_splits_by_snippet in the last part (5) of the perturb.py where this meant
+that the snippet that was perturbed (ex. 95% speed or 105% speed) were allowed 
+to be in both the train/test sets - leading to misleading results.
+-> To fix this, now need to perform the split before the perturbations.
+-> When creating the 8s snippets, also changing the hop to 6s instead of 4s
+(so adj snippets have 2s overlap) thus we modify. Also modified to only keep
+snippets with length >= 6s (before perturb)
+3. Load WAV files just saved and create snippets (see hop_seconds) of the
+waveforms and perturb them before saving snippet WAV files. Assign snippets
+for each 'piece' (i.e. a perturbation) to create the manifest.csv
+
 Responsibilities:
   1. Load MIDI files of interest
     a. From music21 directly -> convert to midi file
@@ -17,6 +29,7 @@ import logging
 import csv
 from pathlib import Path
 import numpy as np
+import random
 import soundfile as sf
 import librosa
 
@@ -136,6 +149,32 @@ def perturb(out_dir: Path, wav_path: Path, waveform: np.ndarray) -> None:
             # The default 'subtype' is 32-bit float "FLOAT"
             sf.write(out_path, wf, SAMPLE_RATE, format='WAV')
 
+def perturb_snippet(out_dir: Path, wav_path: Path, waveform: np.ndarray, snippet_idx: int) -> None:
+    """
+    Save as above but for a snippet instead of a full piece
+    That is, we include the snippet index
+    """
+    # tempos = [0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.25]
+    # pitches = [0, -1, 1, -2, 2, -3, 3, 4, 5, -12, 12]
+    # Smaller version
+    # tempos = [0.9, 0.95, 1.0, 1.05, 1.1]
+    tempos = [0.8, 0.9, 1.0, 1.1, 1.2] # Changing this!
+    # pitches = [0, -1, 1, -2, 2]
+    # I am changing the pitches to be more different (4 = major 3rd, 5 = 4th, 7 = 5th)
+    pitches = [-3, 3, -4, 4]
+    for t in tempos:
+        for p in pitches:
+            wf = waveform.copy()
+            # This will say something like "bach__001__t1p0__s0001.wav"
+            perturbation = "t" + str(t) + "p" + str(p)
+            out_path = out_dir / f"{wav_path.stem}__{perturbation}__s{snippet_idx:04d}.wav"
+            if t != 1.0:
+                wf = librosa.effects.time_stretch(y=wf, rate=t)
+            if p != 0:
+                wf = librosa.effects.pitch_shift(y=wf, sr=SAMPLE_RATE, n_steps=p)
+            # The default 'subtype' is 32-bit float "FLOAT"
+            sf.write(out_path, wf, SAMPLE_RATE, format='WAV')
+
 # ---------------------------------------------------------------------------
 # 4. Create snippets from WAVs based on duration (overlapping/non-overlapping)
 # ---------------------------------------------------------------------------
@@ -152,13 +191,25 @@ def chop_piece_wav(wav_path: Path, snippet_seconds: int, hop_seconds: int) -> li
     snippet_samples = snippet_seconds * sr
     snippets = []
     start_idx = 0
+    # This while condition enforces that snippets are 8s
     while start_idx + snippet_samples <= len(y):
         snippet = y[start_idx:start_idx + snippet_samples]
-        # Don't append empty ones
-        if len(snippet) > 0:
-            snippets.append(snippet)
+        snippets.append(snippet)
         start_idx += hop_seconds * sr
     return snippets
+
+def _assign_splits_by_unperturbed_snippet(piece_id:str, n_snippets: int, test_split: float, seed: int) -> list:
+    """
+    Modeled after _assign_splits_by_snippet in data_prep.py
+    Return: list["test", "train", ...] etc. where list[0] = "test" means the snippet
+    at index 0 is in the test set
+    """
+    rng = random.Random(f"{seed}_{piece_id}")
+    indices = list(range(n_snippets))
+    rng.shuffle(indices)
+    n_test = max(1, int(n_snippets * test_split))
+    test_indices = set(indices[:n_test])
+    return ["test" if i in test_indices else "train" for i in range(n_snippets)]
 
 # ---------------------------------------------------------------------------
 # Main Pipeline
@@ -218,8 +269,88 @@ def run(
     log.info(f"Failed:    {failed_render}")
     log.info(f"WAV files at: {wav_dir}")
     log.info("=" * 50)
+    
+    # 3. Go through WAV files in wav_dir and create snippets, then immediately
+    # perturb them, then treating each of those perturbations as a 'piece',
+    # assign to the train/test and create the manifest.csv
+    folder = Path(wav_dir)
+    psnippets_new1_dir = perturb_dir / "psnippets_new1"
+    psnippets_new1_dir.mkdir(parents=True, exist_ok=True)
+    pmanifest_rows = []
+    kept_pieces = 0
+    skipped_pieces = []
 
-    # 3. Load WAV as list[np.ndarray] in waveforms, create tempo/pitch perturbations
+    # These are the perturbations used in filenames (in each iter I ran this)
+    # (0) tempos = [0.9, 0.95, 1.0, 1.05, 1.1], pitches = [0, -1, 1, -2, 2]
+    # (1) tempos = [0.8, 0.9, 1.0, 1.1, 1.2], pitches = [0, -1, 1, -2, 2]
+    # (2)
+    tempos = [0.8, 0.9, 1.0, 1.1, 1.2]
+    pitches = [-3, 3, -4, 4]
+    perturbs = ["t" + str(t) + "p" + str(p) for t in tempos for p in pitches]
+
+    for piece_path in folder.iterdir():
+        # This returns a list[np.ndarray]
+        snip_waveforms = chop_piece_wav(piece_path, snippet_seconds=8, hop_seconds=6)
+        if len(snip_waveforms) < min_snippets:
+            log.debug(f"Skipping {piece_path}: only {len(snip_waveforms)} snippets (min={min_snippets}).")
+            skipped_pieces.append(piece_path)
+            continue
+        # At this point we should assign the splits so that for each unperturbed
+        # snippet, it is either in train/test, and all perturbations of a snippet too
+        # Paths have form 'bach__bwv404.wav' (stem = omits .wav)
+        composer = piece_path.stem.split('__')[0]
+        piece_id = piece_path.stem.split('__')[1]
+        snippet_splits = _assign_splits_by_unperturbed_snippet(piece_id, len(snip_waveforms), test_split, seed)
+        # For each of the snippets we should perturb it and save to psnippets_dir
+        for i in range(len(snip_waveforms)):
+            # Then we should immediately perturb the snippets (this function saves files)
+            perturb_snippet(psnippets_new1_dir, piece_path, snip_waveforms[i], i)
+            # For each snippet, create 25 rows (1 per perturb)
+            for p in range(len(perturbs)):
+                pmanifest_rows.append({
+                    "filename": f"{composer}__{piece_id}__{perturbs[p]}__s{i:04d}.wav",
+                    "composer": composer,
+                    "piece_id": piece_id,
+                    "perturbation": perturbs[p],
+                    "label": f"{composer}__{piece_id}",
+                    "snippet_index": i,
+                    "split": snippet_splits[i]
+                })
+        kept_pieces += 1
+    
+    PMANIFEST_PATH = psnippets_new1_dir / "manifest.csv"
+    PMANIFEST_COLUMNS = ["filename", "composer", "piece_id", "perturbation", "label", "snippet_index", "split"]
+    with open(PMANIFEST_PATH, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=PMANIFEST_COLUMNS)
+        writer.writeheader()
+        writer.writerows(pmanifest_rows)
+
+    # 4. Summary
+    n_train = sum(1 for r in pmanifest_rows if r["split"] == "train")
+    n_test  = sum(1 for r in pmanifest_rows if r["split"] == "test")
+    n_labels = len(set(r["label"] for r in pmanifest_rows))
+
+    log.info("=" * 50)
+    log.info(f"Pieces kept:    {kept_pieces}  |  skipped: {len(skipped_pieces)}")
+    for i in range(len(skipped_pieces)):
+        log.info(f"Skipping: {skipped_pieces[i]}")
+    log.info(f"Total snippets: {len(pmanifest_rows)}  (train={n_train}, test={n_test})")
+    log.info(f"Unique labels:  {n_labels}")
+    log.info(f"Snippets saved to: {psnippets_new1_dir}")
+    log.info(f"Manifest saved to: {PMANIFEST_PATH}")
+    log.info("=" * 50)
+
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
+if __name__ == "__main__":
+    success = run()
+    print(success)
+
+#----------------------------------------------------------------------------
+# Old code for parts 3, 4, 5, 6 which did perturbations before snippeting
+'''
+# 3. Load WAV as list[np.ndarray] in waveforms, create tempo/pitch perturbations
     waveforms = [] # all waveforms stored here for perturbing
     valid_wavs = [] # the wav paths of these waveforms
     failed_wf = []
@@ -241,6 +372,7 @@ def run(
     for i in range(len(valid_wavs)):
         perturb(pwav_dir, valid_wavs[i], waveforms[i])
     log.info(f"{len(failed_wf)} failed, {len(valid_wavs)} valid")
+    
 
     # 4. Create snippets with overlap
     # While we technically have the snippets from the non-perturbed/non-overlap,
@@ -303,10 +435,4 @@ def run(
     log.info("=" * 50)
 
     return PMANIFEST_PATH
-
-# ---------------------------------------------------------------------------
-# Entry point
-# ---------------------------------------------------------------------------
-if __name__ == "__main__":
-    success = run()
-    print(success)
+'''
