@@ -1,4 +1,6 @@
 import numpy as np
+import inspect
+import copy
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
@@ -38,7 +40,28 @@ def build_scheduler(optimizer, cfg):
         raise ValueError(f"Unknown scheduler: {cfg.scheduler!r}. Use 'cosine' or 'plateau'.")
 
 
+def build_optimizer(model: nn.Module, cfg):
+    """Build optimizer from config. Supports 'adam' and 'adamw'."""
+    opt = cfg.optimizer.lower()
+    if opt == "adam":
+        return torch.optim.Adam(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
+    if opt == "adamw":
+        return torch.optim.AdamW(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
+    raise ValueError(f"Unknown optimizer: {cfg.optimizer!r}. Use 'adam' or 'adamw'.")
+
+
 # ── Core loop functions ───────────────────────────────────────────────────────
+
+def _forward_logits(model: nn.Module, X_batch: torch.Tensor,
+                    y_batch: torch.Tensor | None = None) -> torch.Tensor:
+    """Call model forward with labels when supported by the model signature."""
+    params = inspect.signature(model.forward).parameters
+    if "labels" in params:
+        return model(X_batch, labels=y_batch)
+    if len(params) >= 2:
+        return model(X_batch, y_batch)
+    return model(X_batch)
+
 
 def train_one_epoch(model: nn.Module, loader: DataLoader,
                     optimizer: torch.optim.Optimizer, criterion: nn.Module,
@@ -49,7 +72,8 @@ def train_one_epoch(model: nn.Module, loader: DataLoader,
         X_batch = X_batch.to(device)
         y_batch = y_batch.to(device)
         optimizer.zero_grad()
-        criterion(model(X_batch), y_batch).backward()
+        logits = _forward_logits(model, X_batch, y_batch)
+        criterion(logits, y_batch).backward()
         optimizer.step()
 
 
@@ -72,13 +96,14 @@ def evaluate(model: nn.Module, loader: DataLoader,
     for X_batch, y_batch in loader:
         X_batch = X_batch.to(device)
         y_batch = y_batch.to(device)
-        logits  = model(X_batch)
+        logits  = _forward_logits(model, X_batch)
 
         total_loss   += criterion(logits, y_batch).item() * len(y_batch)
         preds         = logits.argmax(dim=1)
         correct_top1 += preds.eq(y_batch).sum().item()
+        k = min(5, logits.shape[1])
         correct_top5 += (
-            logits.topk(5, dim=1).indices
+            logits.topk(k, dim=1).indices
             .eq(y_batch.unsqueeze(1)).any(dim=1).sum().item()
         )
         all_preds.append(preds.cpu())
@@ -96,53 +121,88 @@ def evaluate(model: nn.Module, loader: DataLoader,
 
 # ── Full training run ─────────────────────────────────────────────────────────
 
-def train(model: nn.Module, train_loader: DataLoader, test_loader: DataLoader,
-          cfg, criterion: nn.Module) -> dict:
+def train(
+    model: nn.Module,
+    train_loader: DataLoader,
+    eval_loader: DataLoader | None,
+    cfg,
+    criterion: nn.Module,
+    monitor_name: str = "val",
+) -> dict:
     """
     Full training loop.
 
-    Returns history dict with keys:
-        train_loss, train_top1, train_top5,
-        test_loss,  test_top1,  test_top5,  lr
+    Returns dict with keys:
+        history, best_epoch, best_metric
     """
     device    = torch.device(cfg.device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
+    optimizer = build_optimizer(model, cfg)
     scheduler = build_scheduler(optimizer, cfg)
 
+    metric_prefix = monitor_name if eval_loader is not None else "train"
     history = {k: [] for k in
                ["train_loss", "train_top1", "train_top5",
-                "test_loss",  "test_top1",  "test_top5", "lr"]}
+                f"{metric_prefix}_loss", f"{metric_prefix}_top1", f"{metric_prefix}_top5", "lr"]}
+
+    best_metric = float("-inf")
+    best_epoch = 0
+    best_state = copy.deepcopy(model.state_dict())
+    epochs_without_improvement = 0
+    min_delta = float(cfg.early_stopping_min_delta)
 
     for epoch in range(1, cfg.n_epochs + 1):
         train_one_epoch(model, train_loader, optimizer, criterion, device)
 
         train_m = evaluate(model, train_loader, criterion, device)
-        test_m  = evaluate(model, test_loader,  criterion, device)
+        eval_m = evaluate(model, eval_loader, criterion, device) if eval_loader is not None else train_m
+        monitor_metric = eval_m["top1"]
 
         # Plateau scheduler needs the metric; cosine just steps.
         if cfg.scheduler == "plateau":
-            scheduler.step(test_m["top1"])
+            scheduler.step(monitor_metric)
         else:
             scheduler.step()
 
         current_lr = optimizer.param_groups[0]["lr"]
 
         for k, v in [("train_loss", train_m["loss"]), ("train_top1", train_m["top1"]),
-                     ("train_top5", train_m["top5"]), ("test_loss",  test_m["loss"]),
-                     ("test_top1",  test_m["top1"]),  ("test_top5",  test_m["top5"]),
+                     ("train_top5", train_m["top5"]), (f"{metric_prefix}_loss", eval_m["loss"]),
+                     (f"{metric_prefix}_top1",  eval_m["top1"]),  (f"{metric_prefix}_top5",  eval_m["top5"]),
                      ("lr", current_lr)]:
             history[k].append(v)
+
+        if monitor_metric > (best_metric + min_delta):
+            best_metric = monitor_metric
+            best_epoch = epoch
+            best_state = copy.deepcopy(model.state_dict())
+            epochs_without_improvement = 0
+        else:
+            epochs_without_improvement += 1
 
         if epoch % 10 == 0 or epoch == 1:
             print(
                 f"Epoch {epoch:>4}/{cfg.n_epochs} | "
                 f"train loss: {train_m['loss']:.4f}  "
                 f"train top-1: {train_m['top1']:.3f}  "
-                f"test top-1: {test_m['top1']:.3f}  "
-                f"test top-5: {test_m['top5']:.3f}  "
+                f"{metric_prefix} top-1: {eval_m['top1']:.3f}  "
+                f"{metric_prefix} top-5: {eval_m['top5']:.3f}  "
                 f"lr: {current_lr:.2e}"
             )
 
-    print(f"\nFinal test top-1: {history['test_top1'][-1]:.4f}")
-    print(f"Final test top-5: {history['test_top5'][-1]:.4f}")
-    return history
+        if eval_loader is not None and cfg.early_stopping_patience > 0:
+            if epochs_without_improvement >= cfg.early_stopping_patience:
+                print(
+                    f"Early stopping at epoch {epoch} (best {metric_prefix}_top1={best_metric:.4f} "
+                    f"at epoch {best_epoch})"
+                )
+                break
+
+    if cfg.save_best_only:
+        model.load_state_dict(best_state)
+
+    print(f"\nBest {metric_prefix} top-1: {best_metric:.4f} (epoch {best_epoch})")
+    return {
+        "history": history,
+        "best_epoch": best_epoch,
+        "best_metric": best_metric,
+    }

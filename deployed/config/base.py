@@ -23,6 +23,7 @@ class BaseConfig:
     batch_size: int = 256
 
     # ── Optimizer ─────────────────────────────────────────────────────────────
+    optimizer: str = "adam"  # "adam" | "adamw"
     lr: float = 1e-3
     weight_decay: float = 1e-3
 
@@ -35,6 +36,13 @@ class BaseConfig:
 
     # ── Loss ──────────────────────────────────────────────────────────────────
     label_smoothing: float = 0.1
+
+    # ── Validation / early stopping ───────────────────────────────────────────
+    val_ratio: float = 0.1
+    split_seed: int = 42
+    early_stopping_patience: int = 100
+    early_stopping_min_delta: float = 0.0
+    save_best_only: bool = True
 
     # ── Evaluation ────────────────────────────────────────────────────────────
     top_n_confused: int = 20

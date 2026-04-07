@@ -9,19 +9,20 @@ from sklearn.preprocessing import LabelEncoder
 
 def plot_training_curves(history: dict, cfg, n_classes: int) -> None:
     epochs = range(1, len(history["train_loss"]) + 1)
+    eval_prefix = "val" if "val_loss" in history else "test"
     fig, axes = plt.subplots(1, 3, figsize=(18, 5))
 
     ax = axes[0]
     ax.plot(epochs, history["train_loss"], label="Train", color="steelblue")
-    ax.plot(epochs, history["test_loss"],  label="Test",  color="coral", linestyle="--")
+    ax.plot(epochs, history[f"{eval_prefix}_loss"],  label=eval_prefix.title(),  color="coral", linestyle="--")
     ax.set(xlabel="Epoch", ylabel="Cross-Entropy Loss", title="Loss Curve")
     ax.legend(); ax.grid(alpha=0.3)
 
     ax = axes[1]
     ax.plot(epochs, history["train_top1"], label="Train top-1", color="steelblue")
-    ax.plot(epochs, history["test_top1"],  label="Test top-1",  color="coral",     linestyle="--")
+    ax.plot(epochs, history[f"{eval_prefix}_top1"],  label=f"{eval_prefix.title()} top-1",  color="coral",     linestyle="--")
     ax.plot(epochs, history["train_top5"], label="Train top-5", color="royalblue", alpha=0.5)
-    ax.plot(epochs, history["test_top5"],  label="Test top-5",  color="tomato",    alpha=0.5, linestyle="--")
+    ax.plot(epochs, history[f"{eval_prefix}_top5"],  label=f"{eval_prefix.title()} top-5",  color="tomato",    alpha=0.5, linestyle="--")
     ax.axhline(1 / n_classes, color="gray", linestyle=":", label=f"Random ({1/n_classes:.3f})")
     ax.set(xlabel="Epoch", ylabel="Accuracy", title="Accuracy Curves")
     ax.legend(fontsize=8); ax.grid(alpha=0.3)

@@ -13,12 +13,13 @@ register it in models/__init__.py, and pass --model_name <arch>.
 
 import argparse
 import dataclasses
-import json
 import random
+from pathlib import Path
 import numpy as np
 import torch
 
 from config.mlp import MLPConfig
+from config.cosine_arcface import CosineArcFaceConfig
 from data import load_data
 from models import build_model
 from train import build_criterion, train, evaluate
@@ -33,7 +34,17 @@ from evaluate import (
 # Add new config classes here as you introduce new architectures.
 CONFIG_REGISTRY = {
     "mlp": MLPConfig,
+    "cosine_arcface": CosineArcFaceConfig,
 }
+
+
+def str2bool(value: str) -> bool:
+    v = value.lower()
+    if v in {"true", "1", "yes", "y"}:
+        return True
+    if v in {"false", "0", "no", "n"}:
+        return False
+    raise argparse.ArgumentTypeError(f"Invalid boolean value: {value!r}")
 
 
 def parse_args():
@@ -46,14 +57,31 @@ def parse_args():
     # Allow any BaseConfig or subclass field to be overridden from the CLI.
     # We parse these as key=value strings and apply them after building the config.
     parser.add_argument("--hidden_dim",    type=int,   default=None)
+    parser.add_argument("--embed_dim",     type=int,   default=None)
     parser.add_argument("--dropout_p",     type=float, default=None)
+    parser.add_argument("--activation",     type=str,   default=None,
+                        choices=["gelu", "relu"])
+    parser.add_argument("--use_layer_norm", type=str2bool, default=None)
+    parser.add_argument("--head_type",      type=str,   default=None,
+                        choices=["softmax", "cosine", "arcface"])
+    parser.add_argument("--scale",          type=float, default=None)
+    parser.add_argument("--margin",         type=float, default=None)
     parser.add_argument("--lr",            type=float, default=None)
     parser.add_argument("--weight_decay",  type=float, default=None)
     parser.add_argument("--n_epochs",      type=int,   default=None)
     parser.add_argument("--batch_size",    type=int,   default=None)
     parser.add_argument("--scheduler",     type=str,   default=None,
                         choices=["cosine", "plateau"])
+    parser.add_argument("--optimizer",     type=str,   default=None,
+                        choices=["adam", "adamw"])
     parser.add_argument("--seed",          type=int,   default=None)
+    parser.add_argument("--val_ratio",     type=float, default=None)
+    parser.add_argument("--split_seed",    type=int,   default=None)
+    parser.add_argument("--early_stopping_patience", type=int, default=None)
+    parser.add_argument("--early_stopping_min_delta", type=float, default=None)
+    parser.add_argument("--save_best_only", type=str2bool, default=None)
+    parser.add_argument("--embeddings_dir", type=str, default=None)
+    parser.add_argument("--output_dir", type=str, default=None)
 
     return parser.parse_args()
 
@@ -63,6 +91,8 @@ def apply_overrides(cfg, args):
     for field in dataclasses.fields(cfg):
         val = getattr(args, field.name, None)
         if val is not None:
+            if field.name in {"embeddings_dir", "output_dir"}:
+                val = Path(val)
             setattr(cfg, field.name, val)
     return cfg
 
@@ -88,8 +118,12 @@ def main():
     print(f"Run:    {cfg.run_name}\n")
 
     # ── Data ──────────────────────────────────────────────────────────────────
-    train_loader, test_loader, le, d, n_classes, y_train_np = load_data(
-        cfg.embeddings_dir, cfg.batch_size
+    train_loader, val_loader, test_loader, le, d, n_classes, y_train_np = load_data(
+        cfg.embeddings_dir,
+        cfg.batch_size,
+        val_ratio=cfg.val_ratio,
+        split_seed=cfg.split_seed,
+        include_val_in_train=False,
     )
 
     # ── Model ─────────────────────────────────────────────────────────────────
@@ -102,11 +136,18 @@ def main():
     criterion = build_criterion(y_train_np, n_classes, cfg.label_smoothing, device)
 
     # ── Train ─────────────────────────────────────────────────────────────────
-    history = train(model, train_loader, test_loader, cfg, criterion)
+    train_out = train(model, train_loader, val_loader, cfg, criterion, monitor_name="val")
+    history = train_out["history"]
 
     # ── Save checkpoint + config ──────────────────────────────────────────────
     ckpt_path = cfg.output_dir / f"{cfg.run_name}.pt"
-    torch.save({"model_state": model.state_dict(), "config": dataclasses.asdict(cfg)},
+    torch.save(
+        {
+            "model_state": model.state_dict(),
+            "config": dataclasses.asdict(cfg),
+            "best_val_top1": train_out["best_metric"],
+            "best_epoch": train_out["best_epoch"],
+        },
                ckpt_path)
     print(f"Checkpoint saved: {ckpt_path}")
 

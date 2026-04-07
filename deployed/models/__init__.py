@@ -1,10 +1,12 @@
 from models.mlp import MLP
+from models.cosine_arcface import CosineArcFaceModel
 
 # Maps the model_name string in any config to its class.
 # To add a new architecture: implement it in models/<name>.py,
 # import it here, and add one line to this dict.
 REGISTRY: dict[str, type] = {
     "mlp": MLP,
+    "cosine_arcface": CosineArcFaceModel,
 }
 
 
