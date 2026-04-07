@@ -132,6 +132,9 @@ def train(
     """
     Full training loop.
 
+    Early stopping monitors validation top-1 when eval_loader is provided,
+    otherwise it falls back to train top-1.
+
     Returns dict with keys:
         history, best_epoch, best_metric
     """
@@ -189,13 +192,12 @@ def train(
                 f"lr: {current_lr:.2e}"
             )
 
-        if eval_loader is not None and cfg.early_stopping_patience > 0:
-            if epochs_without_improvement >= cfg.early_stopping_patience:
-                print(
-                    f"Early stopping at epoch {epoch} (best {metric_prefix}_top1={best_metric:.4f} "
-                    f"at epoch {best_epoch})"
-                )
-                break
+        if cfg.early_stopping_patience > 0 and epochs_without_improvement >= cfg.early_stopping_patience:
+            print(
+                f"Early stopping at epoch {epoch} (best {metric_prefix}_top1={best_metric:.4f} "
+                f"at epoch {best_epoch})"
+            )
+            break
 
     if cfg.save_best_only:
         model.load_state_dict(best_state)
