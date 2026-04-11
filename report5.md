@@ -323,12 +323,10 @@ The results found for the best results from this were 4% worse in top-1 accuracy
 
 
 ### Next Steps
+**Further finetuning work** Initial work done with finetuning seemed to yield decent results, where training with 4 unfrozen layers led to 70% accuracy. We aim to use more data and attempt to improve this.
+
 **Understand the embedding space** Before scaling model capacity further, computing pairwise distances between same-piece vs. different-piece snippets in the raw MERT space would clarify whether the bottleneck is classifier capacity or embedding geometry. If same-piece snippets do not cluster geometrically, no classifier trained on frozen embeddings will solve the problem — and the right response is fine-tuning MERT rather than deepening the classification head.
 
-**Metric learning** This directly optimizes the embedding geometry rather than just the classification head. Use a Triplet Loss or Contrastive Learning (CLAP) approach. Instead of classifying 430 labels, train the model to push embeddings of the same piece together and pull different pieces apart. This way, embeddings can be learned to better support our classification purposes. 
+**Continued Metric learning** This directly optimizes the embedding geometry rather than just the classification head. Use a Triplet Loss or Contrastive Learning (CLAP) approach. Instead of classifying 430 labels, train the model to push embeddings of the same piece together and pull different pieces apart. This way, embeddings can be learned to better support our classification purposes. 
 
-**Continued data perturbations** Consider creating more perturbations beyond the current small changes to create for more robustness, especially more perturbations based on pitch. Try to perturb the embeddings directly, rather than the audio, which may be less interpretable but still be valuable. At the same time, may need to reevaluate computing resources needed / generating those changes during training.
-
-**Further analysis of misclassifications** Currently pieces tend to be misclassfied based on key, but if we may be able to better learn the rhythms, etc. of pieces this may be helpful. Another consideration is whether the number of snippets of a piece (which may range from anywhere from around 3-40) increases its chances of misclassification.
-
-**Continued expansion of dataset**: Going beyond the 430 Bach chorales.
+**Further analysis of misclassifications** We have not done as much in-depth analysis of misclassifications for the most recent approaches (KNN, finetuning, and metric learning), but this would be very beneficial. Also it maybe worth seeing if there is any way to automate the analysis beyond literally looking at the sheet music and making observations.
