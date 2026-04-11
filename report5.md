@@ -317,11 +317,6 @@ Then, for the perturbed dataset it was as follows. Similar to the MLP search ove
 The training curves for test accuracy and test loss across phase 1 and phase 2 are shown below.
 ![alt text](finetune_training_curve.png)
 
-Using finetuned MERT embeddings and conducting another MLP architecture search, the best configuration was found to be [512] hidden dimensions with dropout of 0.4. The graphs for the accuracies and train loss over the 1000 epochs is below:
-![alt text](mlp_search_finetuned_curve.png)
-
-This displays similar issues of overfitting with train accuracy reaching almost 100% accuracy immediately and the **test top-1 accuracies around 40%** which is a slight improvement from previous.
-
 **<u>8. Metric Learning </u>**
 
 The results found for the best results from this were 4% worse in top-1 accuracy as well as in top-5 accuracy compared to the MLP search over the perturbed dataset, so around 40% and 63% respectively. More analysis needs to be done on the results of this.
