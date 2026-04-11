@@ -314,8 +314,55 @@ Then, for the perturbed dataset it was as follows. Similar to the MLP search ove
 - Top-5 Acc: 0.9325
 
 **<u>7. Finetuning of MERT </u>**
-The training curves for test accuracy and test loss across phase 1 and phase 2 are shown below.
-![alt text](finetune_training_curve.png)
+
+We ran two finetuning experiments unfreezing the top 2 and top 4 MERT transformer layers respectively in Phase 2, with differential learning rates (lr = 1e-5 for the unfrozen transformer layers, lr = 1e-3 for the head). Phase 1 was identical across both runs.
+
+**Phase 1** (frozen MERT, head warm-up, 20 epochs) progressed steadily from 3.1% to **30.5% top-1 / 51.4% top-5**, consistent with prior MLP-on-frozen-embeddings results and confirming a stable warm-up signal before any transformer weights were touched.
+
+*Run 1: 2 layers unfrozen*
+
+![Fine-tuning Training Curves (2 layers unfrozen)](finetune_training_curve.png)
+
+**Phase 2** (top 2 layers unfrozen, 30 epochs) immediately jumped to 42.8% top-1 at epoch 1 and continued improving throughout:
+
+| Phase 2 Epoch | Test Top-1 | Test Top-5 | Test Loss |
+|:---:|:---:|:---:|:---:|
+| 1  | 42.8% | 69.1% | 2.405 |
+| 5  | 58.9% | 82.3% | 1.713 |
+| 10 | 62.0% | 83.9% | 1.581 |
+| 20 | 67.4% | 86.9% | 1.464 |
+| 25 | 67.2% | 86.9% | 1.430 |
+| 29 | **68.9%** | 86.0% | 1.405 |
+| 30 | 67.8% | **87.9%** | 1.404 |
+
+The best top-1 checkpoint was at **Phase 2 epoch 29**, achieving **68.9% top-1 and 86.0% top-5 test accuracy** — a **2.00× improvement** over the frozen MERT baseline of 34.4% top-1.
+
+*Run 2: 4 layers unfrozen*
+
+![Fine-tuning Training Curves (4 layers unfrozen)](finetune_4layers_curve.png)
+
+**Phase 2** (top 4 layers unfrozen, 30 epochs) showed a similar immediate jump to 41.7% top-1 at epoch 1, with a slightly stronger overall trajectory:
+
+| Phase 2 Epoch | Test Top-1 | Test Top-5 | Test Loss |
+|:---:|:---:|:---:|:---:|
+| 1  | 41.7% | 68.3% | 2.399 |
+| 5  | 58.9% | 82.0% | 1.695 |
+| 10 | 63.7% | 86.2% | 1.544 |
+| 20 | 68.3% | 85.8% | 1.509 |
+| 25 | 68.1% | 86.4% | 1.374 |
+| **30** | **70.2%** | **88.1%** | **1.367** |
+
+The best checkpoint was at **Phase 2 epoch 30**, achieving **70.2% top-1 and 88.1% top-5 test accuracy** — a **2.04× improvement** over the frozen baseline. Unlike the 2-layer run, test loss was still declining at epoch 30, suggesting the 4-layer model had not yet fully converged.
+
+*Comparison*
+
+| Configuration | Best Top-1 | Best Top-5 | Best Epoch |
+|:---|:---:|:---:|:---:|
+| Frozen MERT baseline | 34.4% | 56.4% | — |
+| 2 layers unfrozen | 68.9% | 87.9% | 29 |
+| 4 layers unfrozen | **70.2%** | **88.1%** | 30 |
+
+Both runs substantially outperformed any frozen-embedding approach, confirming that the embedding geometry was the primary bottleneck throughout. The 4-layer run edges out the 2-layer run by ~1.3 percentage points in top-1, while both achieve similar top-5 accuracy. Neither run showed catastrophic forgetting, validating the two-phase warm-up strategy. The marginal gain from unfreezing 2 additional layers suggests diminishing returns, though the 4-layer model's still-declining loss curve leaves open the possibility of further improvement with more epochs.
 
 **<u>8. Metric Learning </u>**
 
@@ -323,10 +370,12 @@ The results found for the best results from this were 4% worse in top-1 accuracy
 
 
 ### Next Steps
-**Further finetuning work** Initial work done with finetuning seemed to yield decent results, where training with 4 unfrozen layers led to 70% accuracy. We aim to use more data and attempt to improve this.
-
 **Understand the embedding space** Before scaling model capacity further, computing pairwise distances between same-piece vs. different-piece snippets in the raw MERT space would clarify whether the bottleneck is classifier capacity or embedding geometry. If same-piece snippets do not cluster geometrically, no classifier trained on frozen embeddings will solve the problem — and the right response is fine-tuning MERT rather than deepening the classification head.
 
-**Continued Metric learning** This directly optimizes the embedding geometry rather than just the classification head. Use a Triplet Loss or Contrastive Learning (CLAP) approach. Instead of classifying 430 labels, train the model to push embeddings of the same piece together and pull different pieces apart. This way, embeddings can be learned to better support our classification purposes. 
+**Metric learning** This directly optimizes the embedding geometry rather than just the classification head. Use a Triplet Loss or Contrastive Learning (CLAP) approach. Instead of classifying 430 labels, train the model to push embeddings of the same piece together and pull different pieces apart. This way, embeddings can be learned to better support our classification purposes. 
 
-**Further analysis of misclassifications** We have not done as much in-depth analysis of misclassifications for the most recent approaches (KNN, finetuning, and metric learning), but this would be very beneficial. Also it maybe worth seeing if there is any way to automate the analysis beyond literally looking at the sheet music and making observations.
+**Continued data perturbations** Consider creating more perturbations beyond the current small changes to create for more robustness, especially more perturbations based on pitch. Try to perturb the embeddings directly, rather than the audio, which may be less interpretable but still be valuable. At the same time, may need to reevaluate computing resources needed / generating those changes during training.
+
+**Further analysis of misclassifications** Currently pieces tend to be misclassfied based on key, but if we may be able to better learn the rhythms, etc. of pieces this may be helpful. Another consideration is whether the number of snippets of a piece (which may range from anywhere from around 3-40) increases its chances of misclassification.
+
+**Continued expansion of dataset**: Going beyond the 430 Bach chorales.
