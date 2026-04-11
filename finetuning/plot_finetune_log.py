@@ -1,199 +1,234 @@
 """
-plot_finetune_log.py — Visualise training history from finetune_log_*.csv files.
+plot_finetune_log.py — Visualise training logs produced by finetune_caching_disk.py.
 
-Produces a 2×2 figure with four panels:
-  1. Test Top-1 Accuracy  (with best-epoch marker and 34.4% baseline)
-  2. Test Top-5 Accuracy
-  3. Test Loss
-  4. Learning Rate        (log scale)
+Each run writes a CSV to data/finetune/finetune_log_<timestamp>.csv with columns:
+    phase, epoch, test_top1, test_top5, test_loss, lr
 
-Phase 1 and Phase 2 regions are shaded differently so the transition is obvious.
-Multiple log files can be overlaid on the same axes for easy comparison.
+Usage (single run):
+    python plot_finetune_log.py data/finetune/finetune_log_20240101_120000.csv
 
-Usage
------
-  # Single run
-  python plot_finetune_log.py data/finetune/finetune_log_20240601_120000.csv
+Usage (compare multiple runs):
+    python plot_finetune_log.py run1.csv run2.csv run3.csv
 
-  # Compare several runs (each gets its own colour)
-  python plot_finetune_log.py data/finetune/finetune_log_*.csv
+Options:
+    --out PATH      Save figure to file instead of showing interactively.
+                    Extension determines format (.png, .pdf, .svg, etc.)
+    --dpi N         Resolution for raster outputs (default: 150)
+    --no-phase-sep  Disable the vertical line separating Phase 1 / Phase 2
 
-  # Save to file instead of showing interactively
-  python plot_finetune_log.py finetune_log_*.csv --out training_curves.png
+Examples:
+    python plot_finetune_log.py data/finetune/finetune_log_*.csv --out comparison.png
+    python plot_finetune_log.py my_log.csv --out training.pdf --dpi 300
 """
 
 import argparse
 import sys
 from pathlib import Path
 
-import matplotlib
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
 import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
+from matplotlib.lines import Line2D
 
 
-# ── Aesthetics ────────────────────────────────────────────────────────────────
-
-BASELINE_TOP1 = 0.344          # frozen MERT + logistic regression
-PHASE_COLORS  = {"phase1": "#d0e8ff", "phase2": "#ffecd0"}   # background shading
-LINE_COLORS   = plt.rcParams["axes.prop_cycle"].by_key()["color"]
-
-
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 def load_log(path: Path) -> pd.DataFrame:
-    """Load a finetune CSV log and add a global step column."""
+    """Load a finetune CSV log and add a monotonic global_step column."""
     df = pd.read_csv(path)
-    # Renumber epochs globally so Phase 2 continues after Phase 1
-    df["global_epoch"] = df.groupby("phase").cumcount() + 1
-    phase_sizes = df.groupby("phase")["epoch"].count()
 
-    # Assign a global step: phase1 epochs come first, then phase2
-    p1_len = phase_sizes.get("phase1", 0)
-    def _global(row):
-        if row["phase"] == "phase1":
-            return row["epoch"]
-        else:
-            return p1_len + row["epoch"]
+    required = {"phase", "epoch", "test_top1", "test_top5", "test_loss", "lr"}
+    missing  = required - set(df.columns)
+    if missing:
+        raise ValueError(f"{path.name}: missing columns {missing}")
 
-    df["step"] = df.apply(_global, axis=1)
+    # Build a monotonic step index across phase1 → phase2
+    df = df.reset_index(drop=True)
+    df["global_step"] = range(1, len(df) + 1)
     return df
 
 
-def shade_phases(ax: plt.Axes, df: pd.DataFrame) -> None:
-    """Draw coloured background bands for each phase."""
-    for phase, grp in df.groupby("phase"):
-        ax.axvspan(
-            grp["step"].min() - 0.5,
-            grp["step"].max() + 0.5,
-            color=PHASE_COLORS.get(phase, "#eeeeee"),
-            alpha=0.35,
-            zorder=0,
-        )
+def phase_boundaries(df: pd.DataFrame) -> list[float]:
+    """
+    Return the global_step values where the phase changes, for drawing
+    vertical separator lines.
+    """
+    boundaries = []
+    for i in range(1, len(df)):
+        if df.loc[i, "phase"] != df.loc[i - 1, "phase"]:
+            # Place the line midway between the two steps
+            boundaries.append((df.loc[i, "global_step"] + df.loc[i - 1, "global_step"]) / 2)
+    return boundaries
 
 
-def mark_best(ax: plt.Axes, df: pd.DataFrame, col: str, better: str = "max") -> None:
-    """Place a star at the best epoch for *col*."""
-    idx = df[col].idxmax() if better == "max" else df[col].idxmin()
-    best_row = df.loc[idx]
-    ax.plot(
-        best_row["step"], best_row[col],
-        marker="*", markersize=12, color="gold",
-        markeredgecolor="black", markeredgewidth=0.6,
-        zorder=5, linestyle="none",
-    )
-    ax.annotate(
-        f"{best_row[col]:.3f}",
-        xy=(best_row["step"], best_row[col]),
-        xytext=(4, 4), textcoords="offset points",
-        fontsize=7.5, color="black",
-    )
+def label_for(path: Path, idx: int) -> str:
+    """Short label: use the timestamp from the filename, or a generic name."""
+    name = path.stem  # e.g. finetune_log_20240101_120000
+    parts = name.split("_")
+    # Try to extract the timestamp suffix (last two underscore-separated tokens)
+    if len(parts) >= 2:
+        suffix = "_".join(parts[-2:])
+        if suffix.replace("_", "").isdigit():
+            return suffix
+    return f"run{idx + 1}"
 
 
-# ── Main plot ─────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# Plotting
+# ---------------------------------------------------------------------------
 
-def plot_logs(log_paths: list[Path], out_path: Path | None = None) -> None:
-    fig, axes = plt.subplots(2, 2, figsize=(13, 8), constrained_layout=True)
-    fig.suptitle("Fine-tuning Training History", fontsize=14, fontweight="bold")
+COLORS = plt.rcParams["axes.prop_cycle"].by_key()["color"]
 
-    ax_top1, ax_top5, ax_loss, ax_lr = axes.flat
 
-    legend_patches = []
+def plot_logs(
+    logs:          list[tuple[str, pd.DataFrame]],
+    phase_sep:     bool = True,
+    out:           Path | None = None,
+    dpi:           int  = 150,
+) -> None:
+    """
+    Four-panel figure:
+        [0] Test Top-1 Accuracy
+        [1] Test Top-5 Accuracy
+        [2] Test Loss
+        [3] Learning Rate
+    """
+    fig, axes = plt.subplots(2, 2, figsize=(13, 8))
+    axes = axes.flatten()
 
-    for i, path in enumerate(log_paths):
-        df    = load_log(path)
-        color = LINE_COLORS[i % len(LINE_COLORS)]
-        label = path.stem  # e.g. finetune_log_20240601_120000
-
-        # ── Panel 1: Top-1 accuracy ───────────────────────────────────────
-        shade_phases(ax_top1, df)
-        ax_top1.plot(df["step"], df["test_top1"], color=color, linewidth=1.8, label=label)
-        mark_best(ax_top1, df, "test_top1", better="max")
-
-        # ── Panel 2: Top-5 accuracy ───────────────────────────────────────
-        shade_phases(ax_top5, df)
-        ax_top5.plot(df["step"], df["test_top5"], color=color, linewidth=1.8)
-        mark_best(ax_top5, df, "test_top5", better="max")
-
-        # ── Panel 3: Loss ─────────────────────────────────────────────────
-        shade_phases(ax_loss, df)
-        ax_loss.plot(df["step"], df["test_loss"], color=color, linewidth=1.8)
-        mark_best(ax_loss, df, "test_loss", better="min")
-
-        # ── Panel 4: Learning rate ────────────────────────────────────────
-        shade_phases(ax_lr, df)
-        ax_lr.plot(df["step"], df["lr"], color=color, linewidth=1.8)
-
-        legend_patches.append(mpatches.Patch(color=color, label=label))
-
-    # Baseline reference line on Top-1 panel
-    ax_top1.axhline(
-        BASELINE_TOP1, color="grey", linestyle="--", linewidth=1.2,
-        label=f"Baseline (LR): {BASELINE_TOP1:.1%}",
-    )
-
-    # ── Labels & formatting ───────────────────────────────────────────────────
-    ax_top1.set_title("Test Top-1 Accuracy");  ax_top1.set_ylabel("Accuracy")
-    ax_top5.set_title("Test Top-5 Accuracy");  ax_top5.set_ylabel("Accuracy")
-    ax_loss.set_title("Test Loss");             ax_loss.set_ylabel("Cross-Entropy Loss")
-    ax_lr.set_title("Learning Rate");           ax_lr.set_ylabel("LR");  ax_lr.set_yscale("log")
-
-    for ax in axes.flat:
-        ax.set_xlabel("Epoch (global)")
-        ax.grid(True, alpha=0.3, linewidth=0.6)
-        ax.set_xlim(left=0.5)
-
-    # Format accuracy panels as percentages
-    for ax in (ax_top1, ax_top5):
-        ax.yaxis.set_major_formatter(matplotlib.ticker.PercentFormatter(xmax=1.0))
-
-    # Phase legend (shared background colours)
-    phase_legend = [
-        mpatches.Patch(color=PHASE_COLORS["phase1"], alpha=0.6, label="Phase 1 (head warmup)"),
-        mpatches.Patch(color=PHASE_COLORS["phase2"], alpha=0.6, label="Phase 2 (end-to-end)"),
-        mpatches.Patch(color="gold", label="Best epoch ★"),
+    panel_cfg = [
+        dict(col="test_top1", ylabel="Top-1 Accuracy",  title="Test Top-1 Accuracy",  pct=True),
+        dict(col="test_top5", ylabel="Top-5 Accuracy",  title="Test Top-5 Accuracy",  pct=True),
+        dict(col="test_loss", ylabel="Cross-Entropy",   title="Test Loss",             pct=False),
+        dict(col="lr",        ylabel="Learning Rate",   title="Learning Rate",         pct=False, log_y=True),
     ]
 
-    # Combine run labels + phase legend in the top-1 panel
-    handles, labels_ = ax_top1.get_legend_handles_labels()
-    ax_top1.legend(handles + phase_legend, labels_ + [p.get_label() for p in phase_legend],
-                   fontsize=7.5, loc="lower right")
+    for i, (label, df) in enumerate(logs):
+        color = COLORS[i % len(COLORS)]
+        x     = df["global_step"]
 
-    # If multiple runs, add a separate legend for run colours
-    if len(log_paths) > 1:
-        fig.legend(handles=legend_patches, loc="lower center",
-                   ncol=min(len(log_paths), 4), fontsize=8,
-                   title="Runs", bbox_to_anchor=(0.5, -0.03))
+        for ax, cfg in zip(axes, panel_cfg):
+            ax.plot(
+                x, df[cfg["col"]],
+                color=color, linewidth=1.6, alpha=0.85,
+                label=label,
+            )
 
-    if out_path:
-        fig.savefig(out_path, dpi=150, bbox_inches="tight")
-        print(f"Saved → {out_path}")
+    # Draw phase-separator and phase-label annotations (use first log as reference)
+    if phase_sep and logs:
+        ref_df = logs[0][1]
+        for bnd in phase_boundaries(ref_df):
+            for ax in axes:
+                ax.axvline(bnd, color="black", linewidth=1.0, linestyle="--", alpha=0.4)
+
+        # Annotate phase bands using the first log
+        phases = ref_df.groupby("phase", sort=False)["global_step"]
+        for phase_name, steps in phases:
+            mid = (steps.min() + steps.max()) / 2
+            for ax in axes:
+                ax.text(
+                    mid, 1.01, phase_name.replace("phase", "Phase "),
+                    transform=ax.get_xaxis_transform(),
+                    ha="center", va="bottom", fontsize=8.5, color="dimgray",
+                )
+
+    # Formatting
+    for ax, cfg in zip(axes, panel_cfg):
+        ax.set_title(cfg["title"], fontsize=11, fontweight="bold")
+        ax.set_xlabel("Training Step (epoch)", fontsize=9)
+        ax.set_ylabel(cfg["ylabel"],           fontsize=9)
+        ax.tick_params(labelsize=8)
+        ax.grid(True, linestyle=":", alpha=0.5)
+
+        if cfg.get("pct"):
+            ax.yaxis.set_major_formatter(mticker.PercentFormatter(xmax=1.0, decimals=1))
+        if cfg.get("log_y"):
+            ax.set_yscale("log")
+            ax.yaxis.set_minor_formatter(mticker.NullFormatter())
+
+    # Add the baseline annotation to the top-1 panel
+    axes[0].axhline(0.344, color="gray", linewidth=1.0, linestyle=":", alpha=0.7)
+    axes[0].text(
+        0.01, 0.344 + 0.005, "Baseline 34.4%",
+        transform=axes[0].get_yaxis_transform(),
+        ha="left", va="bottom", fontsize=7.5, color="gray",
+    )
+
+    # Shared legend below the figure (only if multiple runs)
+    if len(logs) > 1:
+        handles = [
+            Line2D([0], [0], color=COLORS[i % len(COLORS)], linewidth=2, label=lbl)
+            for i, (lbl, _) in enumerate(logs)
+        ]
+        fig.legend(
+            handles=handles, loc="lower center",
+            ncol=min(len(logs), 6), fontsize=9,
+            frameon=True, bbox_to_anchor=(0.5, -0.04),
+        )
+    else:
+        # Single run: legend inside the accuracy panel
+        axes[0].legend(fontsize=8, loc="lower right")
+
+    fig.suptitle("Fine-tuning Training History", fontsize=13, fontweight="bold", y=1.01)
+    fig.tight_layout()
+
+    if out:
+        fig.savefig(out, dpi=dpi, bbox_inches="tight")
+        print(f"Saved → {out}")
     else:
         plt.show()
 
 
-# ── Entry point ───────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Plot finetune_log_*.csv training curves."
+        description="Plot finetune_caching_disk.py training logs.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=__doc__,
     )
     parser.add_argument(
         "logs", nargs="+", type=Path,
-        help="Path(s) to finetune_log_*.csv files",
+        help="One or more finetune_log_*.csv files to plot.",
     )
     parser.add_argument(
         "--out", type=Path, default=None,
-        help="Save figure to this path instead of displaying (e.g. curves.png)",
+        help="Output file path (e.g. training.png). Omit to show interactively.",
+    )
+    parser.add_argument(
+        "--dpi", type=int, default=150,
+        help="DPI for raster outputs (default: 150).",
+    )
+    parser.add_argument(
+        "--no-phase-sep", action="store_true",
+        help="Disable the vertical Phase 1 / Phase 2 separator line.",
     )
     args = parser.parse_args()
 
-    missing = [p for p in args.logs if not p.exists()]
-    if missing:
-        print("ERROR — file(s) not found:", *missing, sep="\n  ", file=sys.stderr)
-        sys.exit(1)
+    loaded = []
+    for idx, path in enumerate(args.logs):
+        if not path.exists():
+            print(f"ERROR: file not found — {path}", file=sys.stderr)
+            sys.exit(1)
+        try:
+            df    = load_log(path)
+            label = label_for(path, idx)
+            loaded.append((label, df))
+            print(f"Loaded {path.name}  ({len(df)} epochs, phases: {df['phase'].unique().tolist()})")
+        except Exception as exc:
+            print(f"ERROR loading {path.name}: {exc}", file=sys.stderr)
+            sys.exit(1)
 
-    plot_logs(args.logs, out_path=args.out)
+    plot_logs(
+        logs      = loaded,
+        phase_sep = not args.no_phase_sep,
+        out       = args.out,
+        dpi       = args.dpi,
+    )
 
 
 if __name__ == "__main__":
