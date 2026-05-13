@@ -1,235 +1,113 @@
-# STAT 4830 Project Repository
+# Music Piece Classification
 
-Welcome to your project repository! This template helps you develop and implement an optimization project over the semester.
+**Team Members:** Phillip Duarte, Ethan Fan, Selina Zou
 
-## Getting Started
-
-1. **Finding Your Project Idea**
-   - Start with our [Project Ideas Guide](docs/finding_project_ideas.md)
-   - Use AI to explore and refine your ideas
-   - Take time to find something you care about
-
-   It's very important you learn to use AI tools in your work! [Noam Brown](https://x.com/polynoamial/status/1870307185961386366) (OpenAI) says that students should...
-   > Practice working with AI. Human+AI will be superior to human or AI alone for the foreseeable future. Those who can work most effectively with AI will be the most highly valued.
-
-   ![Noam tweet](figures/noam.png)
-
-2. **Week 4 Deliverable**
-  - Follow the [Week 4 Instructions](docs/assignments/week4_deliverable_instructions.md)
-   - Required components:
-     - Initial report draft
-     - Self-critique document analyzing your report's strengths and weaknesses
-     - Supporting Jupyter notebooks/code
-  - Due: Friday, February 6, 2026
-
-## Project Development Cycle
-
-Each week follows an OODA (Observe, Orient, Decide, Act) loop that helps you improve your project systematically:
-
-![Project Development Cycle - A diagram showing the OODA loop (Observe, Orient, Decide, Act) adapted for project development. Each phase has specific activities: Observe (Review Report, Check Results), Orient (Write Critique, Find Gaps), Decide (Plan Changes, Set Goals), and Act (Code, Run Tests). The phases are connected by arrows showing the flow of work, with a feedback loop labeled "Iterative Development" completing the cycle.](docs/figures/ooda_loop.png)
-
-Each cycle produces specific deliverables:
-- OBSERVE: Updated report draft
-- ORIENT: Self-critique document
-- DECIDE: Next actions plan
-- ACT: Code changes & results
-
-See the [Week 4 Instructions](docs/assignments/week4_deliverable_instructions.md) for detailed guidance on writing your first self-critique.
-
-## Project Schedule
-
-### Deliverables (Due Fridays)
-- Week 2 (Jan 23): Email Project Team Names to Ai, Jiahao <jiahaoai@wharton.upenn.edu>
-- Week 4 (Feb 6): Report Draft 1 + Code + Self Critique
-- Week 5 (Feb 13): Slides Draft 1
-- Week 6 (Feb 20): Report Draft 2 + Code + Self Critique
-- Week 7 (Feb 27): Slides Draft 2
-- Week 8: ⚡ Lightning Talks in Class (Mar 3/5) & Report Draft 3 due Friday ⚡
-- Spring Break (Mar 7-15)
-- Week 9 (Mar 20): Slides Draft 3
-- Week 10 (Mar 27): Report Draft 4 + Code + Self Critique
-- Week 11 (Apr 3): Slides Draft 4
-- Week 12 (Apr 10): Report Draft 5 + Code + Self Critique
-- Week 13 (Apr 17): Slides Draft 5
-- Week 14 (Apr 21/23): Final Presentations in Class
-- Week 15 (Apr 28): Final Report + Code + Self Critique
-
-Note: Instructions for peer feedback will be added throughout the semester for each deliverable.
-
-Each draft builds on the previous one, incorporating feedback and new results. You'll meet with course staff three times during the semester to discuss your progress.
-
-## Project Grading
-
-Each deliverable is graded on five components:
-- Report (20%): Problem statement, methodology, results
-- Implementation (35%): Working code, tests, experiments
-- Development Process (15%): Logs, decisions, iterations
-- Critiques (15%): Reflection and planning
-  - Self-critiques (required)
-  - Peer critiques (when assigned)
-  - Response to feedback
-- Repository Structure (15%): Organization, documentation, clarity
-
-Remember:
-- Quality > Quantity
-- Working > Perfect
+Below is the repository structure and instructions for reproducing main results from our project.
 
 ## Repository Structure
-
+Ignore folders 'deprecated', 'docs'/'figures' (project instructions from Prof. Davis)
 ```
-your-repo/
-├── README.md                    # This file
-├── report.md                    # Your project report
-├── notebooks/                   # Jupyter notebooks
-├── src/                        # Source code
-├── tests/                      # Test files
-└── docs/
-    ├── finding_project_ideas.md    # Guide to finding your project
-    ├── assignments/                # Assignment instructions
-    ├── llm_exploration/           # AI conversation logs
-    └── development_log.md         # Progress & decisions
-```
-
-## Development Environment
-
-### Editor Setup
-We recommend using **Cursor**. Students with a `.edu` address get **one year of Cursor Pro for free**: https://cursor.com/students. Cursor is VS Code–compatible (same shortcuts/extensions) but adds in-IDE AI assistance tuned for multi-file context and refactors.
-
-### Required Tools
-- Python 3.10+
-- PyTorch
-- Jupyter Notebook/Lab
-- Git
-
-## Git Setup and Workflow
-
-### First Time Setup
-1. Fork this repository
-   - Click "Fork" in the top right
-   - Name it `STAT-4830-[team-name]-project`
-   - This creates your own copy that can receive updates
-
-2. Set up Git (if you haven't already):
-   Cursor includes Git integration and prompts you to install Git if it's missing.
-   
-   For detailed instructions, see the [Official Git installation guide](https://github.com/git-guides/install-git)
-
-   After installing, set up your identity:
-   ```bash
-   git config --global user.name "Your Name"
-   git config --global user.email "your.email@upenn.edu"
-   ```
-
-3. Clone your fork:
-   ```bash
-   # HTTPS (easier):
-   git clone https://github.com/[your-username]/STAT-4830-[team-name]-project.git
-
-   # SSH (if you've set up SSH keys):
-   git clone git@github.com:[your-username]/STAT-4830-[team-name]-project.git
-   
-   cd STAT-4830-[team-name]-project
-   ```
-
-4. Add upstream remote (to get updates):
-   ```bash
-   # HTTPS:
-   git remote add upstream https://github.com/damek/STAT-4830-project-base.git
-
-   # SSH:
-   git remote add upstream git@github.com:damek/STAT-4830-project-base.git
-   ```
-
-5. Add your team members as collaborators:
-   - Go to your repo on GitHub
-   - Settings → Collaborators → Add people
-   - Add using their GitHub usernames
-
-### Working on Your Project
-1. Create a new branch:
-   ```bash
-   git checkout -b exploration
-   ```
-
-2. Make changes and commit:
-   ```bash
-   git add .
-   git commit -m "Description of changes"
-   git push origin exploration
-   ```
-
-### Getting Updates
-When the base repository is improved:
-```bash
-# Get updates
-git fetch upstream
-git checkout main
-git merge upstream/main
-
-# Update your branch
-git checkout exploration
-git merge main
+├── config/config.py                   # Config relevant to running data pipeline
+├── data/                              # Intermediate files for initial linear/logistic regression
+│   ├── ...
+├── data_pipleine/                     # Main pipeline files in order (disregard misspelling)     
+│   ├── data_prep.py                   # Loads from music21
+│   ├── render.py                      # Renders as WAV
+│   ├── embed.py                       # Embed WAV with MERT
+│   └── perturb.py                     # Condensed pipeline for perturbed data 
+├── deployed/                          # Pipeline refactor (main files in order)
+│   ├── config/                        
+│   │   ├── base.py
+│   │   ├── cosine_arcface.py          # For metric learning
+│   │   └── mlp.py                     # For regular MLP
+│   ├── models/                        # Model classes
+│   │   ├── __init__.py
+│   │   ├── cosine_arcface.py
+│   │   └── mlp.py
+│   ├── cosine_arcface_model_spec.md   # Markdown on metric learning
+│   ├── SUMMARY.md                     # Markdown on this pipeline refactor
+│   ├── run.py                         # Entry point
+│   ├── data.py                        # Data loading and preprocessing
+│   ├── train.py                       # Training logic with flexible hyperparameters
+│   ├── evaluate.py                    # Evaluation metrics
+│   ├── search.py                      # Hyperparameter search
+│   └── knn.py                         # KNN experiment
+├── finetuning/                        # Finetuning of MERT
+│   ├── config.py                      # Comparable to config.py in config folder
+│   ├── finetune_caching_disk.py       # Main finetuning code
+│   └── plot_finetune_log.py           # Helper file to plot results   
+├── notebooks/  
+│   ├── 01_data_prep_notebook.ipynb    # Load from music21 for linear regression
+│   ├── 02_optimization_notebook.ipynb # Optimization for linear regression
+│   ├── 02a_logistic_regression.ipynb  # Logistic regression redo of above
+│   ├── w6_embeddings_logreg.ipynb     # Logistic regression with embeddings
+│   ├── w7_mlp.ipynb                   # MLP with embeddings
+│   ├── w10_mlp_search.ipynb           # MLP architecture search with embeddings
+│   ├── w12_mlp_search.ipynb           # Repeat of above for perturbed version
+├── presentation/                      # 5 previous slides submitted
+│   ├── ...
+├── finetune_4layers_curve.png         # Image files in reports
+├── ...             
+├── report.md                          # 5 previous reports submitted
+├── ...
+├── report5.md
+├── PRIME_INTELLECT.md                 # Instructions for Prime Intellect use   
+├── STAT_4830_Music_Classification.pdf # Final report PDF
+├── STAT 4830 Slide Deck Final.pdf     # Final presentation slides
+└── README.md                          # This file             
 ```
 
-### Troubleshooting
-- Having Git issues? Post on Ed Discussion
-- Can't push/pull? Check if you're using HTTPS or SSH
-- Windows path too long? Enable long paths:
-  ```bash
-  git config --system core.longpaths true
-  ```
+## Setup Instructions
+To discuss the steps to reproduce results, follow notes here. There are several options for how to run the code which we've used such as running locally, in Colab, and with Prime Intellect. Described is the case when loading Bach chorales from music21, but note that you can also enter the pipeline using MIDI or WAV files. Following cloning the repository do:
 
-## Getting Help
-- Use AI tools (ChatGPT, GitHub Copilot)
-- See course staff for technical issues
-- Document your progress
+1. **Versioning:** Python 3.11+ is required. It is advisable to use a CUDA-compatible GPU as some parts take a long time on CPU (i.e. generating perturbations, embeddings).
 
+2. **Data Pipeline:** The files involved are in the folder 'data_pipleine'. Also, in order to render MIDI as WAV, a soundfont is required, the exact one we used can be downloaded [here](https://www.polyphone.io/en/soundfonts/instrument-sets/250-fluidr3-gm).
 
-## Spring 2025 Project Examples
+    a. Clean version: In order to produce audio WAV snippets of pieces separated into train/test split in the format our models require, the files that have to be ran in order are `data_prep.py` (loads as MIDI and snippets pieces from music21), `render.py` (renders MIDI as WAV), and `embed.py` (uses MERT to embed these snippets).
 
-Current student projects:
+    b. Perturbed version: Alternatively, the file `perturb.py` (which is a combination of the above 3 files) can be run which will do the exact same thing but create perturbed versions of each snippet as specified (see the function 'perturb_snippet'). The result of both of these pipelines is a set of WAV files with associated `manifest.csv` with info on each and whether they are in train/test.
 
-1. **Decentralized Recommendation for Cold-Start Personalization**  
-   * **Summary:** Builds a cross-platform fashion recommender for users with little history. Synthesizes persona-level ratings, embeds ~3k products with CLIP image/text vectors, and benchmarks content-based filtering, collaborative filtering, low-rank matrix factorization, and a two-tower deep model. Evaluates RMSE/MAE and Precision/Recall@K to trade off global error vs. top-K relevance under cold-start.  
-   * **Link:** [Final Report](https://github.com/kuomat/STAT-4830-vllm-project/blob/main/Final%20Report.pdf)
+    In both cases, some installs to run before running the code are (Colab version)
+    ```
+    !pip install numpy soundfile librosa music21 transformers matplotlib
+    ```
+    The following is needed for `render.py`
+    ```
+    !apt-get install -y fluidsynth libsndfile1
+    ```
+    
+    The specific directory structure (of all the data) should be like this. In our work we used a Google Drive folder to keep all this. It is pretty much analogous for the perturbed data, except the snippets are created after rendered as WAV rather than before. Ensure that 
+    ```
+    ├── snippets/                          # MIDI snippets
+    │   ├── manifest.csv                   # Table about the snippets contained herein
+    │   ├── bach__bwv1.6__s0000.mid
+    │   └── ...
+    ├── audio/                             # WAV snippets
+    │   ├── bach__bwv1.6__s0000.wav
+    │   └── ...
+    ├── embeddings/                        # Embeddings as numpy arrays etc.
+    │   ├── embeddings_train.npy
+    │   ├── embeddings_test.npy
+    │   ├── labels_train.npy               
+    │   ├── labels_test.npy
+    │   └── ...                            # Visualizations generated stored here too
+    ├── finetune/                          # Populated later in finetuning
+    │   ├── finetune_log.csv               # Log of top-1/top-5 per epoch
+    │   ├── finetune_best.pt               # Best model weights saved
+    │   └── ...                            # Cached frozen layers, etc.
+    └── config.py                          # Required for training
+    ```
 
-2. **Optimizing Attention Mechanisms in Transformer Models**  
-   * **Summary:** Replaces $O(n^2)$ attention with efficient variants: learned sparse masks, Performer-style kernelized attention, and hierarchical sparsity. Trains on WikiText-2, minimizing KL-divergence to a baseline Transformer while tracking cross-entropy, coherence, and memory/latency. Shows custom masks preserve fluency with lower compute.  
-   * **Link:** [Final Report](https://github.com/charisgao/STAT-4830-Optimizing-Attention-Project/blob/main/docs/report.md)
+3. **Running things locally or in Colab:** In terms of next steps in training classification models on these embeddings of music piece snippets that have just been generated, the first way is to run things locally or in Google Colab. The latter is recommended since GPUs such as T4, A100, etc. may be used. The important thing to note here is that the file `config.py` (in the config folder) should be in the root folder from which things are being run, as the below files reference it to import config info.
+- The relevant files are the Python notebooks namely `w6_embeddings_logreg.ipynb` (logistic regression), `w7_mlp.ipynb` (basic MLP), `w10_mlp_search.ipynb` and its counterpart `w12_mlp_search_ipynb` (search over MLP architectures). These directly are ipynb so can be run cell by cell in Colab.
+- For finetuning there is `finetune_caching_disk.py` which is a Python file, but can also be ran in Colab by running a cell like `!python /content/drive/MyDrive/stat-4830/finetune_caching_disk.py`. See the exact file for where results may be saved.
+- If running the 'perturb' version of things, make sure that the file structure matches that which is required or change variables to make things match
+- Also note, if it is of interest, the earliest work we did with logistic regression on extracted musical features (key, tempo, etc.) can all be easily run locally as those do not take too long.
 
-3. **Poker Zero: Risk-Aware Agents for No-Limit Hold'em**  
-   * **Summary:** Designs a poker agent that blends LLM-guided reasoning with self-play reinforcement learning. Uses counterfactual regret minimization heuristics and win-rate/stack-size metrics against GTO-style opponents to study bluffing, bet sizing, and stability under incomplete information.  
-   * **Link:** [Final Report](https://github.com/AC2005/STAT-4830-poker/blob/main/docs/Final%20Report.pdf)
+4. **Running things in Prime Intellect:** To utilize Prime Intellect's compute to perform some of the more computationally expensive work, there are also a few options (see PRIME_INTELLECT.md for more detailed instructions). In both cases one should do the same 'pip install' (such as in step 2b as needed)
+- The first option is to copy all necessary files from local into the GPU instance. We used `rclone` for downloading from Google Drive and then something like `gpu: scp -r <local_path> ubuntu@<remote_path>:~` for the copying. The file can then be run with `python3 <path_to_file>`. Afterwards, files generated that are in the remote machine can be copied back into local in a similar manner.
+- The second option is using `uv` which doesn't require the manual copying. This allows for better reproduciblity and the specific directions are in `deployed/PRIME_INTELLECT.md`
 
-4. **Portfolio Refinement Through Iterative Sequential Modeling (PRISM)**  
-   * **Summary:** Optimizes daily portfolios with penalties on drawdown, turnover, and concentration. Formulates a multi-objective loss, applies sequential modeling to adapt weights, and benchmarks Sharpe, max drawdown, and turnover against “safe” baselines.  
-   * **Link:** [Final Report](https://github.com/dhruv575/STAT-4830-project-base/blob/main/report.md)
-
-5. **Optimization in Preference Learning**  
-   * **Summary:** Predicts hotel choices using two pipelines: mixture preference models optimized via Frank–Wolfe variants, and low-rank matrix completion with bias-aware initialization and Huber loss. Expedia-derived data backtests show linear preference models outperform deeper nets under sparsity, while matrix completion boosts robustness.  
-   * **Link:** [Final Report](https://github.com/Lexaun-chen/STAT-4830-Group-Project/blob/main/Final_Report.pdf)
-
-6. **Designing Good Rewards for Reinforcement Learning on LLMs**  
-   * **Summary:** Implements GRPO on Qwen-1.5B for GSM8K-style reasoning, comparing rule-based vs. hybrid perplexity rewards. Early experiments on matrix inversion validate dense rewards; hybrid absolute/relative perplexity improves stability over naive reward shaping.  
-   * **Link:** [Final Report](https://github.com/JustinSQiu/STAT-4830-curriculum-learning-project/blob/main/report.md)
-
-7. **SAT Formula Extraction via Transformer Optimization**  
-   * **Summary:** Fine-tunes FLAN-T5 to emit symbolic formulas for SAT word problems, then solves them with SymPy. Uses GRPO-style training, regex parsing, and answer-level checks; reports ~81% symbolic similarity and ~72% answer accuracy with a formula-to-answer pipeline.  
-   * **Link:** [Final Report](https://github.com/awu626/STAT-4830-project/blob/main/FinalReport.md)
-
-8. **Modeling Human Behavior Without Humans – Bringing Prospect Theory to Multi-Agent RL**  
-   * **Summary:** Extends MADDPG with cumulative prospect theory transforms (CPT-MADDPG) to control risk attitudes. Evaluates on Simple Tag/Spread and first-price auctions; shows risk-seeking CPT speeds early learning, loss-averse CPT enforces prudence, and shared utility aggregation preserves coordination.  
-   * **Link:** [Final Report](https://github.com/sheyanlalmohammed1/STAT-4830-CPT-MARL-project/blob/main/report.pdf)
-
-9. **Sleep is All We Need: Optimizing EEG-Based Deep Learning Models for N1 Sleep Onset Detection**  
-   * **Summary:** Builds a two-stage ensemble for detecting the rare N1 sleep stage from single-channel EEG. Combines convolutional encoders, domain-specific PSD/Catch22 features, a transformer sequence model, and an N1-focused detector, improving N1 F1 from 0.38 to 0.53 while maintaining overall accuracy.  
-   * **Link:** [Final Report](https://github.com/kimberlyliang/STAT-4830-GOALZ-project/blob/main/report.pdf)
-
-10. **Optimizing Vehicle Routing with Graph-Based and Probabilistic Models**  
-    * **Summary:** Compares Dijkstra/A* baselines with BERT-based trip models, reinforcement learning policies, and graph neural networks to optimize travel time and EV energy use. Uses OSMnx data plus eVED/EV trip logs; predicts routes and per-trip energy, benchmarking against historical trips and shortest-path baselines.  
-    * **Link:** [Final Report](https://github.com/TheCrypted/STAT-4830-project-base/blob/main/docs/final_report.md)
-
-
-
-
-
+## Demo
+[link]
