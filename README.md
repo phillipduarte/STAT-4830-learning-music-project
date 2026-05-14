@@ -110,4 +110,4 @@ To discuss the steps to reproduce results, follow notes here. There are several 
 - The second option is using `uv` which doesn't require the manual copying. This allows for better reproduciblity and the specific directions are in `deployed/PRIME_INTELLECT.md`
 
 ## Demo
-[link]
+https://www.youtube.com/watch?v=h-eBnwdgSR0
